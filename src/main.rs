@@ -4,18 +4,24 @@ use std::collections::HashMap;
 
 //recursively get all files in a directory
 fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str) {
-	let files = fs::read_dir(dir_name);
 
-	//if the directory doesn't exist or is inaccessable, print an error and quit
+	//Check if the selected directory exists and get a list of filenames
+	let files = fs::read_dir(dir_name);
 	if files.is_err() {
 		eprintln!("Cannot open directory: {}", dir_name);
 		std::process::exit(-1);
 	}
-
-	//since we know there was no error, we can unwrap this without issue
 	let files = files.unwrap();
 
+	//iterate over the files in the directory
 	for file in files {
+
+		//this should never happen but just in case it does
+		if file.is_err() {
+			continue;
+		}
+
+		//get file path as a string
 		let file_name = file.as_ref().unwrap().path().display().to_string();
 
 		//skip line counting if item is a directory
@@ -27,33 +33,30 @@ fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str) {
 
 		//count the newlines in the file
 		} else {
-			split_file(data, file_name);
+			count_lines(data, file_name);
 		}
 	}
-}
-
-//count all the newlines in a file
-fn count_lines(file_path: &str) -> u64 {
-	let file_contents = match fs::read_to_string(file_path) {
-		Ok(file) => file,
-		Err(_error) => return 0,
-	};
-			
-	let mut line_counter: u64 = 0;
-	for c in file_contents.chars() {
-		if c == '\n' {
-			line_counter += 1;
-		}
-	}
-
-	return line_counter;
 }
 
 //get the lines in a file
-fn split_file(data: &mut HashMap<String, u64>, file_name: String) {
-	let file_lines = count_lines(&file_name);
+fn count_lines(data: &mut HashMap<String, u64>, file_name: String) {
+
+	//read file as a string
+	let file_contents = fs::read_to_string(&file_name);
+	if file_contents.is_err() {
+		return;
+	}
+	let file_contents = file_contents.unwrap();
+
+	//count how many lines are in the file
+	let mut file_lines: u64 = 0;
+	for c in file_contents.chars() {
+		if c == '\n' {
+			file_lines += 1;
+		}
+	}
 	
-	//keep track of our data for printing later
+	//store results for printing later
 	data.insert(file_name, file_lines);
 }
 
