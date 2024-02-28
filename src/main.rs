@@ -60,14 +60,55 @@ fn count_lines(data: &mut HashMap<String, u64>, file_name: String) {
 	data.insert(file_name, file_lines);
 }
 
+fn print_helptext() {
+	println!("[lcount]");
+	println!("-h --help -help");
+	println!("Show this help text");
+	println!();
+
+	println!("-t --target");
+	println!("Target folder to check the lines of");
+	println!();
+
+	println!("-i --ignore");
+	println!("Folder/file to be ignored, can be used multiple times");
+	println!("can also be passed as a comma,separated,list");
+	println!();
+}
+
 fn main() {
 	//get command line arguments
 	let args: Vec<String> = env::args().collect();
 
-	//assign path if a path is provided
+	let mut ignore_list: Vec<String> = Vec::new();
+
+	//path defaults to . (current directory)
 	let mut path: String = ".".to_string(); 
-	if args.len() > 1 {
-		path = args[1].clone();
+
+	//iterate through arguments
+	let mut i = 1;
+	while i < args.len() {
+		match args[i].as_str() {
+			"-i" | "-ignore" => {
+				ignore_list.push(args[i+1].to_string());
+			},
+
+			"-h" | "--help" | "-help" => {
+				print_helptext();
+				std::process::exit(0);
+			},
+
+			"-t" | "--target" => {
+				path = args[i+1].to_string();
+				i += 1;
+			}
+
+			arg => {
+				eprintln!("Unrecognized argument: {}", arg);
+			}
+		}
+
+		i += 1;
 	}
 	
 	let mut data:HashMap<String, u64> = HashMap::new();
