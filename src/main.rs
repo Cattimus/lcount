@@ -1,8 +1,9 @@
 use std::fs;
 use std::env;
+use std::collections::HashMap;
 
 //recursively get all files in a directory
-fn get_filenames(lines: &mut Vec<u64>, names: &mut Vec<String>, dir_name: &str) {
+fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str) {
 	let files = fs::read_dir(dir_name);
 
 	//if the directory doesn't exist or is inaccessable, print an error and quit
@@ -19,10 +20,14 @@ fn get_filenames(lines: &mut Vec<u64>, names: &mut Vec<String>, dir_name: &str) 
 
 		//skip line counting if item is a directory
 		let descriptor = fs::metadata(&file_name).unwrap();
+
+		//recursively call function to walk down the directory
 		if descriptor.is_dir() {
-			get_filenames(lines, names, &file_name);
+			get_filenames(data, &file_name);
+
+		//count the newlines in the file
 		} else {
-			split_file(lines, names, &file_name);
+			split_file(data, file_name);
 		}
 	}
 }
@@ -45,12 +50,11 @@ fn count_lines(file_path: &str) -> u64 {
 }
 
 //get the lines in a file
-fn split_file(lines: &mut Vec<u64>, names: &mut Vec<String>, file_name: &str) {
+fn split_file(data: &mut HashMap<String, u64>, file_name: String) {
 	let file_lines = count_lines(&file_name);
-		
-	//keep track of data for printing later
-	lines.push(file_lines);
-	names.push(file_name.to_string());
+	
+	//keep track of our data for printing later
+	data.insert(file_name, file_lines);
 }
 
 fn main() {
@@ -63,14 +67,13 @@ fn main() {
 		path = args[1].clone();
 	}
 	
-	let mut lines: Vec<u64> = Vec::new();
-	let mut names: Vec<String> = Vec::new();
-	get_filenames(&mut lines, &mut names, &path);
+	let mut data:HashMap<String, u64> = HashMap::new();
+	get_filenames(&mut data, &path);
 	
 	//count the total amount of lines
 	let mut total_lines: u64 = 0;
-	for i in &lines {
-		total_lines += *i;
+	for i in &data {
+		total_lines += i.1;
 	}
 	
 	//find the maximum number of digits
@@ -82,8 +85,8 @@ fn main() {
 	}
 	
 	//print collumnated output
-	for i in 0..names.len() {
-		println!("{:max_digits$} {}", lines[i], names[i]);
+	for i in &data {
+		println!("{:max_digits$} {}", i.1, i.0);
 	}
 
 	println!("{:max_digits$} {}", total_lines, "total");
