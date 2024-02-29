@@ -23,8 +23,14 @@ impl LcountData {
 //recursively get all files in a directory
 fn get_filenames(data: &mut LcountData, dir_name: &str) {
 
-	//don't check directory if it's in the ignore list
-	if data.ignore_list.contains_key(dir_name) {
+	//fix to remove the ./ from the directory name if we're running in dot mode (path = .)
+	let mut fixed_name = dir_name.to_string();
+	if data.dot_mode {
+		fixed_name = fixed_name[2..].to_string();
+	}
+
+	//check if directory is in the ignore list
+	if data.ignore_list.contains_key(&fixed_name) {
 		return;
 	}
 
@@ -56,8 +62,15 @@ fn get_filenames(data: &mut LcountData, dir_name: &str) {
 
 		//count the newlines in the file
 		} else {
+
+			//fix to remove the ./ from the directory name if we're running in dot mode (path = .)
+			let mut fixed_name = file_name.to_string();
+			if data.dot_mode {
+				fixed_name = fixed_name[2..].to_string();
+			}
+
 			//ignore the file if it's in the ignore list
-			if !data.ignore_list.contains_key(&file_name) {
+			if !data.ignore_list.contains_key(&fixed_name) {
 				count_lines(data, file_name);
 			}
 		}
@@ -170,7 +183,12 @@ fn main() {
 	
 	//print collumnated output
 	for i in &data.results {
-		println!("{:max_digits$} {}", i.1, i.0);
+
+		if data.dot_mode {
+			println!("{:max_digits$} {}", i.1, &(i.0[2..]));
+		} else {
+			println!("{:max_digits$} {}", i.1, i.0);
+		}
 	}
 
 	println!("{:max_digits$} {}", total_lines, "total");
