@@ -2,11 +2,29 @@ use std::fs;
 use std::env;
 use std::collections::HashMap;
 
+struct LcountData {
+	pub results: HashMap<String, u64>,
+	pub ignore_list: HashMap<String, i32>,
+	pub base_path: String,
+	pub dot_mode: bool
+}
+
+impl LcountData {
+	pub fn new() -> Self {
+		LcountData {
+			results: HashMap::new(),
+			ignore_list: HashMap::new(),
+			base_path: String::from(".\\"),
+			dot_mode: true
+		}
+	}
+}
+
 //recursively get all files in a directory
-fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str, ignore_list: &HashMap<String, i32>) {
+fn get_filenames(data: &mut LcountData, dir_name: &str) {
 
 	//don't check directory if it's in the ignore list
-	if ignore_list.contains_key(dir_name) {
+	if data.ignore_list.contains_key(dir_name) {
 		return;
 	}
 
@@ -34,12 +52,12 @@ fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str, ignore_list: &
 
 		//recursively call function to walk down the directory
 		if descriptor.is_dir() {
-			get_filenames(data, &file_name, ignore_list);
+			get_filenames(data, &file_name);
 
 		//count the newlines in the file
 		} else {
 			//ignore the file if it's in the ignore list
-			if !ignore_list.contains_key(&file_name) {
+			if !data.ignore_list.contains_key(&file_name) {
 				count_lines(data, file_name);
 			}
 		}
@@ -47,7 +65,7 @@ fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str, ignore_list: &
 }
 
 //get the lines in a file
-fn count_lines(data: &mut HashMap<String, u64>, file_name: String) {
+fn count_lines(data: &mut LcountData, file_name: String) {
 
 	//read file as a string
 	let file_contents = fs::read_to_string(&file_name);
@@ -65,7 +83,7 @@ fn count_lines(data: &mut HashMap<String, u64>, file_name: String) {
 	}
 	
 	//store results for printing later
-	data.insert(file_name, file_lines);
+	data.results.insert(file_name, file_lines);
 }
 
 fn print_helptext() {
@@ -88,10 +106,7 @@ fn main() {
 	//get command line arguments
 	let args: Vec<String> = env::args().collect();
 
-	let mut ignore_list: HashMap<String, i32> = HashMap::new();
-
-	//path defaults to . (current directory)
-	let mut path: String = ".".to_string(); 
+	let mut data = LcountData::new();
 
 	//iterate through arguments
 	let mut i = 1;
@@ -106,12 +121,12 @@ fn main() {
 				//extract values from comma,separated,list
 				if argstr.contains(',') {
 					for arg in argstr.split(',') {
-						ignore_list.insert(arg.to_string(), 1);
+						data.ignore_list.insert(arg.to_string(), 1);
 					}
 
 				//add value directly to ignore list
 				} else {
-					ignore_list.insert(argstr.to_string(), 1);
+					data.ignore_list.insert(argstr.to_string(), 1);
 				}
 
 				i += 1;
@@ -123,7 +138,8 @@ fn main() {
 			},
 
 			"-t" | "--target" => {
-				path = args[i+1].to_string();
+				data.base_path = args[i+1].to_string();
+				data.dot_mode = false;
 				i += 1;
 			}
 
@@ -135,12 +151,12 @@ fn main() {
 		i += 1;
 	}
 	
-	let mut data:HashMap<String, u64> = HashMap::new();
-	get_filenames(&mut data, &path, &ignore_list);
+	let path_copy = data.base_path.to_string();
+	get_filenames(&mut data, &path_copy);
 
 	//count the total amount of lines
 	let mut total_lines: u64 = 0;
-	for i in &data {
+	for i in &data.results {
 		total_lines += i.1;
 	}
 	
@@ -153,7 +169,7 @@ fn main() {
 	}
 	
 	//print collumnated output
-	for i in &data {
+	for i in &data.results {
 		println!("{:max_digits$} {}", i.1, i.0);
 	}
 
