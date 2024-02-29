@@ -3,7 +3,12 @@ use std::env;
 use std::collections::HashMap;
 
 //recursively get all files in a directory
-fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str) {
+fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str, ignore_list: &HashMap<String, i32>) {
+
+	//don't check directory if it's in the ignore list
+	if ignore_list.contains_key(dir_name) {
+		return;
+	}
 
 	//Check if the selected directory exists and get a list of filenames
 	let files = fs::read_dir(dir_name);
@@ -29,10 +34,16 @@ fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str) {
 
 		//recursively call function to walk down the directory
 		if descriptor.is_dir() {
-			get_filenames(data, &file_name);
+			get_filenames(data, &file_name, ignore_list);
 
 		//count the newlines in the file
 		} else {
+
+			//ignore the file if it's in the ignore list
+			if ignore_list.contains_key(&file_name) {
+				return;
+			}
+
 			count_lines(data, file_name);
 		}
 	}
@@ -80,7 +91,7 @@ fn main() {
 	//get command line arguments
 	let args: Vec<String> = env::args().collect();
 
-	let mut ignore_list: Vec<String> = Vec::new();
+	let mut ignore_list: HashMap<String, i32> = HashMap::new();
 
 	//path defaults to . (current directory)
 	let mut path: String = ".".to_string(); 
@@ -90,7 +101,23 @@ fn main() {
 	while i < args.len() {
 		match args[i].as_str() {
 			"-i" | "-ignore" => {
-				ignore_list.push(args[i+1].to_string());
+				
+				//this has to be done for windows otherwise it may not recognize the path
+				let mut argstr = args[i+1].to_string();
+				argstr = argstr.replace("/", "\\");
+
+				//extract values from comma,separated,list
+				if argstr.contains(',') {
+					for arg in argstr.split(',') {
+						ignore_list.insert(arg.to_string(), 1);
+					}
+
+				//add value directly to ignore list
+				} else {
+					ignore_list.insert(argstr.to_string(), 1);
+				}
+
+				i += 1;
 			},
 
 			"-h" | "--help" | "-help" => {
@@ -112,8 +139,8 @@ fn main() {
 	}
 	
 	let mut data:HashMap<String, u64> = HashMap::new();
-	get_filenames(&mut data, &path);
-	
+	get_filenames(&mut data, &path, &ignore_list);
+
 	//count the total amount of lines
 	let mut total_lines: u64 = 0;
 	for i in &data {
