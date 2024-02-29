@@ -38,13 +38,10 @@ fn get_filenames(data: &mut HashMap<String, u64>, dir_name: &str, ignore_list: &
 
 		//count the newlines in the file
 		} else {
-
 			//ignore the file if it's in the ignore list
-			if ignore_list.contains_key(&file_name) {
-				return;
+			if !ignore_list.contains_key(&file_name) {
+				count_lines(data, file_name);
 			}
-
-			count_lines(data, file_name);
 		}
 	}
 }
