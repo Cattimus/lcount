@@ -2,14 +2,12 @@ use std::fs;
 use std::env;
 use std::collections::HashMap;
 
-//todo: disable ./ from display when targeting .
-//todo: [bug] directories beginning with . aren't being ignored properly
+//todo - make sure paths are working correctly on windows
 
 struct LcountData {
 	pub results: HashMap<String, u64>,
 	pub ignore_list: HashMap<String, i32>,
 	pub base_path: String,
-	pub dot_mode: bool,
 	pub debug_mode: bool
 }
 
@@ -19,7 +17,6 @@ impl LcountData {
 			results: HashMap::new(),
 			ignore_list: HashMap::new(),
 			base_path: String::from("./"),
-			dot_mode: true,
 			debug_mode: false
 		}
 	}
@@ -28,9 +25,9 @@ impl LcountData {
 //recursively get all files in a directory
 fn get_filenames(data: &mut LcountData, dir_name: &str) {
 
-	//fix to remove the ./ from the directory name if we're running in dot mode (path = .)
-	let mut fixed_name = dir_name.to_string();
-	if data.dot_mode {
+	//fix to remove the ./ from the directory name if we're running in current directory (. or ./)
+	let mut fixed_name = String::from(dir_name);
+	if &fixed_name[..2] == "./" {
 		fixed_name = fixed_name[2..].to_string();
 	}
 
@@ -68,9 +65,9 @@ fn get_filenames(data: &mut LcountData, dir_name: &str) {
 		//count the newlines in the file
 		} else {
 
-			//fix to remove the ./ from the directory name if we're running in dot mode (path = .)
+			//fix to remove the ./ from the directory name if we're running current dir (. or ./)
 			let mut fixed_name = file_name.to_string();
-			if data.dot_mode {
+			if &fixed_name[..2] == "./" {
 				fixed_name = fixed_name[2..].to_string();
 			}
 
@@ -155,8 +152,14 @@ fn main() {
 			},
 
 			"-t" | "--target" => {
-				data.base_path = args[i+1].to_string();
-				data.dot_mode = false;
+				//handle . gracefully
+				let mut argpath = args[i+1].to_string();
+				if argpath == "." {
+					argpath = String::from("./");
+				}
+
+				//assign data to string
+				data.base_path = argpath;
 				i += 1;
 			}
 
@@ -192,7 +195,7 @@ fn main() {
 	//print collumnated output
 	for i in &data.results {
 
-		if data.dot_mode {
+		if data.base_path == "./" {
 			println!("{:max_digits$} {}", i.1, &(i.0[2..]));
 		} else {
 			println!("{:max_digits$} {}", i.1, i.0);
