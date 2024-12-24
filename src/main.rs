@@ -2,11 +2,15 @@ use std::fs;
 use std::env;
 use std::collections::HashMap;
 
+//todo: disable ./ from display when targeting .
+//todo: [bug] directories beginning with . aren't being ignored properly
+
 struct LcountData {
 	pub results: HashMap<String, u64>,
 	pub ignore_list: HashMap<String, i32>,
 	pub base_path: String,
-	pub dot_mode: bool
+	pub dot_mode: bool,
+	pub debug_mode: bool
 }
 
 impl LcountData {
@@ -14,8 +18,9 @@ impl LcountData {
 		LcountData {
 			results: HashMap::new(),
 			ignore_list: HashMap::new(),
-			base_path: String::from(".\\"),
-			dot_mode: true
+			base_path: String::from("./"),
+			dot_mode: true,
+			debug_mode: false
 		}
 	}
 }
@@ -101,15 +106,15 @@ fn count_lines(data: &mut LcountData, file_name: String) {
 
 fn print_helptext() {
 	println!("[lcount]");
-	println!("-h --help -help");
+	println!("-h, --help, -help");
 	println!("Show this help text");
 	println!();
 
-	println!("-t --target");
+	println!("-t, --target");
 	println!("Target folder to check the lines of");
 	println!();
 
-	println!("-i --ignore");
+	println!("-i, --ignore");
 	println!("Folder/file to be ignored, can be used multiple times");
 	println!("can also be passed as a comma,separated,list");
 	println!();
@@ -126,7 +131,6 @@ fn main() {
 	while i < args.len() {
 		match args[i].as_str() {
 			"-i" | "-ignore" => {
-				
 				//this has to be done for windows otherwise it may not recognize the path
 				let mut argstr = args[i+1].to_string();
 				argstr = argstr.replace("/", "\\");
@@ -154,6 +158,10 @@ fn main() {
 				data.base_path = args[i+1].to_string();
 				data.dot_mode = false;
 				i += 1;
+			}
+
+			"-d" | "--debug" => {
+				data.debug_mode = true;
 			}
 
 			arg => {
@@ -190,6 +198,19 @@ fn main() {
 			println!("{:max_digits$} {}", i.1, i.0);
 		}
 	}
-
 	println!("{:max_digits$} {}", total_lines, "total");
+
+	//print debug information
+	if data.debug_mode {
+		println!();
+		println!("[DEBUG]:");
+		println!("Input path: {}", data.base_path);
+
+		println!("Ignore path(s):");
+		print!("[");
+		for val in data.ignore_list {
+			print!("{}, ", val.0);
+		}
+		println!("]");
+	}
 }
